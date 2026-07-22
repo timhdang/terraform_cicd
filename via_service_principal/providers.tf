@@ -15,7 +15,7 @@ terraform {
 
   backend "azurerm" {
     resource_group_name  = "mgmt-rg"
-    storage_account_name = "tdangdevstorageaccount1"
+    storage_account_name = "tdangmgmtstorageaccount1"
     container_name       = "tfstate"
     key                  = "prod/terraform.tfstate"
   }
