@@ -71,7 +71,7 @@ jobs:
         uses: trstringer/manual-approval@v1
         with:
           secret: ${{ github.token }}
-          approvers: tim
+          approvers: timhdang
           minimum-approvals: 1
           issue-title: "Approve Terraform Production Deployment"
 
