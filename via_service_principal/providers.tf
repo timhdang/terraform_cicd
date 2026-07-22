@@ -1,4 +1,6 @@
 terraform {
+  required_version = ">= 1.6.0"
+
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -11,19 +13,14 @@ terraform {
     }
   }
 
-  required_version = ">= 1.6.0"
-}
-
-# Default AzureRM provider
-provider "azurerm" {
-  features {}
-
-  terraform {
   backend "azurerm" {
     resource_group_name  = "dev-rg"
     storage_account_name = "tdangdevstorageaccount1"
     container_name       = "tfstate"
     key                  = "prod/terraform.tfstate"
   }
-  }
+}
+
+provider "azurerm" {
+  features {}
 }
