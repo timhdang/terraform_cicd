@@ -1,4 +1,4 @@
-name: Terraform Plan
+name: Terraform Deploy
 
 on:
   workflow_dispatch:
@@ -56,3 +56,6 @@ jobs:
         with:
           name: terraform-plan
           path: tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
