@@ -1,0 +1,124 @@
+name: Terraform Deploy with Approval Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+
+  terraform-deploy-dev:
+    runs-on: ubuntu-latest
+    environment: Dev
+
+    defaults:
+      run:
+        working-directory: via_service_principal
+
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_USE_OIDC: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=mgmt_rg" \
+            -backend-config="storage_account_name=tdangmgmtstorageaccount1" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=dev/terraform.tfstate" \
+            -backend-config="subscription_id=${{ secrets.STATE_SUBSCRIPTION_ID }}"
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: via_service_principal/tfplan
+
+      - name: Terraform Apply Dev
+        run: terraform apply -auto-approve tfplan
+
+
+  approval-gate:
+    needs: terraform-deploy-dev
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Approval Gate
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          approvers: tim
+          minimum-approvals: 1
+          issue-title: "Approve Terraform Production Deployment"
+
+
+  terraform-deploy-prod:
+    needs: approval-gate
+    runs-on: ubuntu-latest
+    environment: Prd
+
+    defaults:
+      run:
+        working-directory: via_service_principal
+
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.PRD_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_USE_OIDC: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+          path: via_service_principal
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.PRD_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=mgmt_rg" \
+            -backend-config="storage_account_name=tdangmgmtstorageaccount1" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=prod/terraform.tfstate" \
+            -backend-config="subscription_id=${{ secrets.STATE_SUBSCRIPTION_ID }}"
+
+      - name: Terraform Apply Prod
+        run: terraform apply -auto-approve tfplan
