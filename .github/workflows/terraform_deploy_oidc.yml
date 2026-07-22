@@ -1,4 +1,4 @@
-name: Terraform Deploy
+name: Terraform Deploy OIDC
 
 on:
   workflow_dispatch:
