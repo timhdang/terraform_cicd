@@ -42,8 +42,14 @@ jobs:
               "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
             }
             
-      - name: Terraform Init
-        run: terraform init
+      - name: Terraform Init (with Remote State in a different subscription)
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=mgmt-rg" \
+            -backend-config="storage_account_name=tdangmgmtstorageaccount1" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=prod/terraform.tfstate" \
+            -backend-config="subscription_id=${{ secrets.STATE_SUBSCRIPTION_ID }}"
 
       - name: Terraform Validate
         run: terraform validate
