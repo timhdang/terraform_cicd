@@ -1,0 +1,70 @@
+name: Terraform Drift detection with driftctl
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform-deploy:
+    runs-on: ubuntu-latest
+    environment: Prd
+
+    defaults:
+      run:
+        working-directory: via_service_principal
+
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_USE_OIDC: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=mgmt_rg" \
+            -backend-config="storage_account_name=tdangmgmtstorageaccount1" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=prod/terraform.tfstate" \
+            -backend-config="subscription_id=${{ secrets.STATE_SUBSCRIPTION_ID }}"
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Pull Terraform State
+        run: terraform state pull > terraform.tfstate
+
+      - name: Install driftctl
+        run: |
+          curl -L https://github.com/snyk/driftctl/releases/latest/download/driftctl_linux_amd64 \
+            -o driftctl
+          chmod +x driftctl
+          sudo mv driftctl /usr/local/bin/
+
+      - name: Drift Detection
+        run: |
+          driftctl scan \
+            --from tfstate://terraform.tfstate
