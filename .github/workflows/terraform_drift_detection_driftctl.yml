@@ -76,4 +76,5 @@ jobs:
           --filter "Attr.resource_group_name=='dev-rg'"
 
       - name: Drift Check with terraform plan -refresh-only
-        run: terraform plan -detailed-exitcode
+        run: |
+          terraform plan -detailed-exitcode
