@@ -66,5 +66,4 @@ jobs:
 
       - name: Drift Detection
         run: |
-          driftctl scan \
-            --from tfstate://terraform.tfstate
+          driftctl scan --from tfstate://terraform.tfstate --to="azure+tf"
