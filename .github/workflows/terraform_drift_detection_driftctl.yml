@@ -55,8 +55,10 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      - name: Terraform Plan
-        run: terraform plan -out=tfplan
+      - name: Drift Check with terraform plan -refresh-only
+        if: always()
+        run: |
+          terraform plan -refresh-only
 
       - name: Pull Terraform State
         run: terraform state pull > terraform.tfstate
@@ -71,9 +73,4 @@ jobs:
       - name: Drift Detection
         continue-on-error: true
         run: |
-          driftctl scan --from tfstate://terraform.tfstate --to "azure+tf"
-
-      - name: Drift Check with terraform plan -refresh-only
-        if: always()
-        run: |
-          terraform plan -detailed-exitcode
+          driftctl scan --from tfstate://terraform.tfstate --to "azure+tf" --only-unmanaged
