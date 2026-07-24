@@ -73,5 +73,7 @@ jobs:
           driftctl scan \
           --from tfstate://terraform.tfstate \
           --to azure+tf \
-          --deep \
           --filter "Attr.resource_group_name=='dev-rg'"
+
+      - name: Drift Check with terraform plan -refresh-only
+        run: terraform plan -detailed-exitcode
