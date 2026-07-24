@@ -71,10 +71,7 @@ jobs:
       - name: Drift Detection
         continue-on-error: true
         run: |
-          driftctl scan \
-          --from tfstate://terraform.tfstate \
-          --to azure+tf \
-          --filter "Attr.resource_group_name=='dev-rg'"
+          driftctl scan --from tfstate://terraform.tfstate --to "azure+tf"
 
       - name: Drift Check with terraform plan -refresh-only
         if: always()
