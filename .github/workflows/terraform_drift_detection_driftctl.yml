@@ -70,4 +70,8 @@ jobs:
 
       - name: Drift Detection
         run: |
-          driftctl scan --from tfstate://terraform.tfstate --to="azure+tf"
+          driftctl scan \
+          --from tfstate://terraform.tfstate \
+          --to azure+tf \
+          --deep \
+          --filter "Attr.resource_group_name=='dev-rg'"
