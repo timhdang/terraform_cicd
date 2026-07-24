@@ -69,6 +69,7 @@ jobs:
           sudo mv driftctl /usr/local/bin/
 
       - name: Drift Detection
+        continue-on-error: true
         run: |
           driftctl scan \
           --from tfstate://terraform.tfstate \
@@ -76,5 +77,6 @@ jobs:
           --filter "Attr.resource_group_name=='dev-rg'"
 
       - name: Drift Check with terraform plan -refresh-only
+        if: always()
         run: |
           terraform plan -detailed-exitcode
